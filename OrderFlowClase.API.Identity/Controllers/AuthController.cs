@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using OrderFlowClase.API.Identity.Services;
 
 namespace OrderFlowClase.API.Identity.Controllers
 {
@@ -9,24 +10,33 @@ namespace OrderFlowClase.API.Identity.Controllers
     public class AuthController : ControllerBase
     {
         private IEnumerable<User> _users = new List<User>();
+        private IAuthService _authService;
+
+        public AuthController(IAuthService authService)
+        {
+            _authService = authService;
+        }
 
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] User user)
+        public async Task<IActionResult> Register([FromBody] User user)
         {
-            _users.ToList().Add(user);
-            return Ok(user);
+           var result = await _authService.Register(user.Email, user.Password);
+
+            return Ok("User registered successfully.");
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] User user)
+        public async Task<IActionResult> Login([FromBody] User user)
         {
-            var existingUser = _users.FirstOrDefault(u => u.Username == user.Username && u.Password == user.Password);
-            if (existingUser != null)
+            var result = await _authService.Login(user.Email, user.Password);
+
+            if (result == null)
             {
-                return Ok("Login successful");
+                return Unauthorized();
             }
-            return Unauthorized("Invalid credentials");
+
+            return Ok(result);
         }
 
     }
@@ -34,7 +44,7 @@ namespace OrderFlowClase.API.Identity.Controllers
 
     public class User
     {
-        public string Username { get; set; }
-        public string Password { get; set; }
+        public required string Email { get; set; }
+        public required string Password { get; set; }
     }
 }

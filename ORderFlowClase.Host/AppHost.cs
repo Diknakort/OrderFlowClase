@@ -1,6 +1,10 @@
-using System.Security.Principal;
-
 var builder = DistributedApplication.CreateBuilder(args);
+
+var rabbit = builder
+    .AddRabbitMQ("rabbitmq")
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume("rabbitmq-data")
+    .WithManagementPlugin();
 
 var postgres = builder
     .AddPostgres("postgres")

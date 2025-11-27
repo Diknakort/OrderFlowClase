@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using MassTransit;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using OrderFlowClase.API.Identity.Dto.Auth;
+using OrderFlowClase.Shared;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -12,13 +14,18 @@ namespace OrderFlowClase.API.Identity.Services
 
         private UserManager<IdentityUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly IPublishEndpoint _publishEndpoint;
+
 
         public AuthService(
             UserManager<IdentityUser> userManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IPublishEndpoint publishEndpoint
+        )
         {
             _userManager = userManager;
             _configuration = configuration;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<ResponseLogin?> Login(string email, string password)
@@ -66,7 +73,7 @@ namespace OrderFlowClase.API.Identity.Services
                 signingCredentials: creds
             );
 
-            var encryptedToken =  new JwtSecurityTokenHandler().WriteToken(token);
+            var encryptedToken = new JwtSecurityTokenHandler().WriteToken(token);
 
             return new ResponseLogin
             {
@@ -80,12 +87,18 @@ namespace OrderFlowClase.API.Identity.Services
 
         public async Task<bool> Register(string email, string password)
         {
-
             var result = await _userManager.CreateAsync(new IdentityUser
             {
                 UserName = email.Split("@")[0],
                 Email = email
             }, password);
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user != null)
+            {
+                await _publishEndpoint.Publish(new UserCreatedEvents(user.Id, user.Email!));
+            }
 
             if (result != null) return true;
 

@@ -22,6 +22,8 @@ var db = postgres.AddDatabase("identity");
 
 var identity = builder.AddProject<Projects.OrderFlowClase_API_Identity>("orderflowclase-api-identity")
     .WaitFor(db)
+    .WaitFor(rabbit)
+    .WithReference(rabbit)
     .WithReference(db);
 
 
